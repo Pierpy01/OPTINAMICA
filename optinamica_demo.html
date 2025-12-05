@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>OPTINAMICA — MGP Simulation</title>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    :root{
+        --deep-blue: #0b63b7;     /* deep blue from logo */
+        --aqua: #5fe8e0;          /* aqua / light-teal */
+        --dark-gray: #666666;     /* button gray */
+        --muted: #777777;
+        --bg: #ffffff;
+        --card: #f8f9fb;
+        --success: #2d9c6a;
+    }
+    *{box-sizing:border-box;font-family: Inter, Roboto, Arial, sans-serif}
+    body{
+        margin:0;
+        background:var(--bg);
+        color:#222;
+        -webkit-font-smoothing:antialiased;
+    }
+
+    /* container */
+    .wrap{
+        max-width:1100px;
+        margin:32px auto;
+        padding:24px;
+    }
+
+    /* header */
+    header{
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:16px;
+        margin-bottom:18px;
+    }
+    .brand{
+        display:flex;
+        align-items:center;
+        gap:14px;
+    }
+    .brand img{
+        width:80px;
+        height:80px;
+        object-fit:contain;
+        border-radius:8px;
+        background:transparent;
+    }
+    .brand h1{
+        margin:0;
+        font-size:20px;
+        color:var(--deep-blue);
+        letter-spacing:1px;
+    }
+    .date{
+        text-align:right;
+        color:var(--muted);
+        font-size:14px;
+    }
+    .subtitle{
+        color:var(--muted);
+        font-size:14px;
+        margin-top:6px;
+    }
+
+    /* login overlay */
+    #loginOverlay{
+        position:fixed;
+        inset:0;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        background: rgba(0,0,0,0.45);
+        z-index:999;
+    }
+    .loginCard{
+        background: white;
+        border-radius:12px;
+        padding:26px;
+        width:360px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+        text-align:center;
+    }
+    .loginCard h2{ margin:6px 0 18px 0; color:var(--deep-blue) }
+    .loginCard .welcome{ font-size:13px; color:var(--muted); margin-bottom:14px; }
+    .loginCard input{
+        width:100%;
+        padding:10px 12px;
+        margin:8px 0;
+        border-radius:8px;
+        border:1px solid #e1e4ea;
+        font-size:14px;
+    }
+    .btn{
+        display:inline-block;
+        border:0;
+        background:var(--dark-gray);
+        color:white;
+        padding:10px 16px;
+        border-radius:8px;
+        font-weight:600;
+        cursor:pointer;
+        margin-top:10px;
+    }
+    .err{ color:#c0392b; margin-top:10px }
+
+    /* layout */
+    .grid{
+        display:grid;
+        grid-template-columns: 360px 1fr;
+        gap:18px;
+        align-items:start;
+    }
+
+    .card{
+        background:var(--card);
+        border-radius:12px;
+        padding:18px;
+        box-shadow: 0 6px 18px rgba(10,10,10,0.04);
+    }
+
+    label{ display:block; margin-bottom:6px; color: #333; font-weight:600; font-size:13px; }
+    input[type="number"]{
+        width:100%;
+        padding:10px;
+        border-radius:8px;
+        border:1px solid #e1e4ea;
+        font-size:14px;
+    }
+
+    .muted-small{ color:var(--muted); font-size:12px; margin-top:6px }
+
+    .runBtn{
+        width:100%;
+        margin-top:12px;
+        background:var(--dark-gray);
+        color:white;
+        padding:12px;
+        border-radius:10px;
+        border:0;
+        font-size:15px;
+        cursor:pointer;
+    }
+
+    .resultRow{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:12px;
+        margin:8px 0;
+        padding:8px;
+        border-radius:8px;
+        background: #ffffff;
+        border:1px solid #edf1f5;
+    }
+
+    .small-label{ font-size:13px; color:var(--muted) }
+    .big-val{ font-weight:700; color:var(--deep-blue) }
+
+    /* chart area */
+    #chartCard{ padding:12px 18px; }
+    canvas{ width:100%!important; height:360px!important; }
+
+    /* results table */
+    table{
+        width:100%;
+        border-collapse:collapse;
+        margin-top:10px;
+    }
+    th,td{
+        padding:8px 10px;
+        border-bottom:1px solid #eef2f6;
+        text-align:left;
+        font-size:13px;
+    }
+    th{ color:var(--muted); font-weight:700; font-size:12px; }
+
+    /* footer small */
+    .note{ margin-top:12px; color:var(--muted); font-size:13px; }
+
+    @media (max-width:980px){
+        .grid{ grid-template-columns: 1fr; }
+        .brand img{ width:64px; height:64px; }
+    }
+
+</style>
+</head>
+<body>
+<div class="wrap">
+
+    <header>
+        <div class="brand">
+            <!-- Put the file 'globally.png' in the same folder as this HTML -->
+            <img src="globally.png" alt="OPTINAMICA logo" onerror="this.style.display='none'">
+            <div>
+                <h1>OPTINAMICA</h1>
+                <div class="subtitle">Energy Consulting & Optimization</div>
+            </div>
+        </div>
+
+        <div class="date" id="dateArea">
+            <!-- JS will fill date -->
+        </div>
+    </header>
+
+    <div style="margin-bottom:12px;color:var(--muted)">
+        <strong>Optimization Session for Tomorrow (MGP D+1)</strong>
+        <div class="muted-small">This simulation computes the optimal CHP operation for the selected electrical and thermal demand and prepares the market bids in 100 kW steps.</div>
+    </div>
+
+    <div class="grid">
+        <!-- LEFT COLUMN: INPUTS -->
+        <div>
+            <div class="card">
+                <h3 style="margin:0 0 12px 0;color:var(--deep-blue)">Session Inputs</h3>
+
+                <label for="input_elec">Electrical Load Demand (kW)</label>
+                <input id="input_elec" type="number" min="0" value="8150">
+
+                <label for="input_therm" style="margin-top:8px">Thermal Load Demand (kW)</label>
+                <input id="input_therm" type="number" min="0" value="5070">
+
+                <div style="margin-top:12px">
+                    <div class="small-label">Predicted market price for tomorrow (simulated)</div>
+                    <div style="display:flex;gap:10px;align-items:center;margin-top:6px">
+                        <div id="priceBadge" style="background:var(--aqua);padding:8px 12px;border-radius:8px;font-weight:700;color:#04506b"></div>
+                        <button class="btn" id="refreshPrice">Regenerate Price</button>
+                    </div>
+                </div>
+
+                <button class="runBtn" id="runBtn" style="margin-top:14px">RUN TODAY'S SESSION</button>
+
+                <div class="note">Market offers are placed in 100 kW increments. Excess rounding is ignored in cost calculations (bought back by GSE — not included).</div>
+            </div>
+
+            <div class="card" style="margin-top:14px">
+                <h4 style="margin:0 0 10px 0;color:var(--deep-blue)">Summary (best solution)</h4>
+                <div class="resultRow">
+                    <div>
+                        <div class="small-label">Optimal CHP power (post-correction)</div>
+                        <div class="big-val" id="best_chp">-</div>
+                    </div>
+                    <div>
+                        <div class="small-label">Produced by CHP (kW)</div>
+                        <div class="big-val" id="produced_chp">-</div>
+                    </div>
+                </div>
+
+                <div class="resultRow">
+                    <div>
+                        <div class="small-label">Energy to BUY (MGP, post)</div>
+                        <div class="big-val" id="buy_qty">-</div>
+                    </div>
+                    <div>
+                        <div class="small-label">Energy to SELL (MGP, post)</div>
+                        <div class="big-val" id="sell_qty">-</div>
+                    </div>
+                </div>
+
+                <div class="resultRow" style="margin-top:8px">
+                    <div>
+                        <div class="small-label">Estimated cost (EUR)</div>
+                        <div class="big-val" id="best_cost">-</div>
+                    </div>
+                    <div>
+                        <div class="small-label">Session date</div>
+                        <div class="big-val" id="session_date">-</div>
+                    </div>
+                </div>
+
+                <div style="margin-top:10px">
+                    <button class="btn" id="downloadCsv" title="Download table results">Download results CSV</button>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top:14px">
+                <h4 style="margin:0 0 10px 0;color:var(--deep-blue)">Detailed table (all candidates)</h4>
+                <div style="max-height:260px; overflow:auto;">
+                    <table id="resultsTable">
+                        <thead>
+                            <tr><th>P_CHPost (kW)</th><th>Buy (kW)</th><th>Sell (kW)</th><th>Thermal deficit (kW)</th><th>Cost (EUR)</th></tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: chart -->
+        <div>
+            <div id="chartCard" class="card">
+                <h3 style="margin:0 0 12px 0;color:var(--deep-blue)">Cost vs CHP Power</h3>
+                <canvas id="costChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- LOGIN OVERLAY (single-file approach) -->
+<div id="loginOverlay">
+    <div class="loginCard">
+        <img src="globally.png" alt="logo" style="width:84px;height:84px;object-fit:contain;margin-bottom:8px" onerror="this.style.display='none'">
+        <h2>Welcome Client 0</h2>
+        <div class="welcome">Please sign in to access the MGP simulation</div>
+
+        <input id="loginUser" placeholder="Username" value="">
+        <input id="loginPass" placeholder="Password" type="password" value="">
+
+        <button id="loginBtn" class="btn">LOGIN</button>
+        <div id="loginMsg" class="err" style="display:none"></div>
+        <div style="font-size:12px;color:var(--muted);margin-top:10px">Use <strong>client0</strong> / <strong>123456</strong></div>
+    </div>
+</div>
+
+<script>
+/* =======================
+   Helper: date
+   ======================= */
+function formatDate(d){
+    const opts = { year:'numeric', month:'short', day:'numeric' };
+    return d.toLocaleDateString(undefined, opts);
+}
+document.getElementById('dateArea').innerHTML = formatDate(new Date());
+
+/* Session date (tomorrow) */
+function tomorrowDateStr(){
+    const t = new Date();
+    t.setDate(t.getDate()+1);
+    return formatDate(t);
+}
+document.getElementById('session_date').textContent = tomorrowDateStr();
+
+/* =======================
+   LOGIN logic
+   ======================= */
+const loginOverlay = document.getElementById('loginOverlay');
+document.getElementById('loginBtn').addEventListener('click', function(){
+    const u = document.getElementById('loginUser').value.trim();
+    const p = document.getElementById('loginPass').value.trim();
+    const msg = document.getElementById('loginMsg');
+    if(u === 'client0' && p === '123456'){
+        msg.style.display='none';
+        loginOverlay.style.display='none';
+    } else {
+        msg.style.display='block';
+        msg.textContent = 'Invalid credentials. Please try again.';
+    }
+});
+
+/* allow Enter key for login */
+document.getElementById('loginPass').addEventListener('keydown', e=>{
+    if(e.key === 'Enter') document.getElementById('loginBtn').click();
+});
+
+/* =======================
+   Price generator
+   ======================= */
+function genPrice(){
+    const r = Math.random() * (0.20 - 0.05) + 0.05;
+    return Number(r.toFixed(3));
+}
+const priceBadge = document.getElementById('priceBadge');
+let marketPrice = genPrice();
+priceBadge.textContent = '€ ' + marketPrice.toFixed(3) + '/kWh';
+document.getElementById('refreshPrice').addEventListener('click', ()=>{
+    marketPrice = genPrice();
+    priceBadge.textContent = '€ ' + marketPrice.toFixed(3) + '/kWh';
+});
+
+/* =======================
+   Simulation constants (from your MATLAB)
+   ======================= */
+const c_m = 0.015;
+const eff_el = 0.46;
+const eff_t_ref = 0.90;
+const tax_u = 0.0187;
+const Cu_kwh_e_grid = 0.18;
+const Cu_gas = 0.60;
+const act = 0.05;
+const y = 10;
+const eff_CHP_reff = 0.473;
+const lhv = 9.59;
+const tax_ee = 0.0016;
+const AF = (1/act) * (1 - (1 / Math.pow(1+act, y)));
+const I_CHP = 4000000;
+
+const carico_e_default = 8.1500 * 1000; // kW
+const carico_t_default = 5.0700 * 1000; // kW
+
+// CHP data (kW / %)
+const P_CHP = [5000, 6000, 7000, 8000, 9000, 10000];
+const ee_CHP = [38.8, 39.7, 40.2, 41.4, 42.4, 43.0]; // percent
+const et_CHP = [44.8, 45.6, 46.3, 46.8, 47.5, 48.4]; // percent
+
+// discrete candidate CHP electric powers (kW)
+const potenza_e = [0].concat(Array.from({length:(10000-5000)/100 +1}, (_,i)=>5000 + i*100));
+
+// linear interpolation with clamping to endpoints (prevents null outside range)
+function linearInterp(xArr, yArr, x){
+    // if x is at or below first known point -> return first y
+    if (x <= xArr[0]) return yArr[0];
+    // if x is at or above last known point -> return last y
+    if (x >= xArr[xArr.length - 1]) return yArr[yArr.length - 1];
+
+    // otherwise find interval and interpolate
+    for (let i = 0; i < xArr.length - 1; i++){
+        if (x >= xArr[i] && x <= xArr[i+1]){
+            const x0 = xArr[i], x1 = xArr[i+1];
+            const y0 = yArr[i], y1 = yArr[i+1];
+            const t = (x - x0) / (x1 - x0);
+            return y0 + t * (y1 - y0);
+        }
+    }
+    // fallback (shouldn't happen)
+    return yArr[yArr.length - 1];
+}
+
+/* =======================
+   Main simulation function (converted from MATLAB)
+   ======================= */
+function runSimulation(){
+    // read inputs
+    const inputE = Number(document.getElementById('input_elec').value) || carico_e_default;
+    const inputT = Number(document.getElementById('input_therm').value) || carico_t_default;
+
+    const carico_e = inputE;
+    const carico_t = inputT;
+    const prezzi = marketPrice; // €/kWh
+
+    // pre-alloc arrays
+    const Potenza_e_post = [];
+    const Cost = [];
+    const E_buy_req = [];
+    const E_sell_req = [];
+    const excess_buy = [];
+    const excess_sell = [];
+    const thermal_deficit = [];
+
+    for(let p=0; p<potenza_e.length; p++){
+        const P_CHP_el = potenza_e[p];
+
+        // before correction: internal purchase or surplus
+        let p_e_int = 0, p_e_sur = 0;
+        if(carico_e >= P_CHP_el){
+            p_e_int = carico_e - P_CHP_el;
+            p_e_sur = 0;
+        } else {
+            p_e_int = 0;
+            p_e_sur = P_CHP_el - carico_e;
+        }
+
+        // POST-CORRECTION to 100 kW steps (always round UP)
+        let buy_req = 0, sell_req = 0, ex_buy = 0, ex_sell = 0;
+        if(p_e_int > 0){
+            buy_req = Math.ceil(p_e_int / 100) * 100;
+            ex_buy = buy_req - p_e_int;
+        }
+        if(p_e_sur > 0){
+            sell_req = Math.ceil(p_e_sur / 100) * 100;
+            ex_sell = sell_req - p_e_sur;
+        }
+
+        // store
+        E_buy_req.push(buy_req);
+        E_sell_req.push(sell_req);
+        excess_buy.push(ex_buy);
+        excess_sell.push(ex_sell);
+
+        // adjust Potenza_e_post due to rounding of sell (sell_req - p_e_sur)
+        const P_post = P_CHP_el + (sell_req - p_e_sur);
+        Potenza_e_post.push(P_post);
+
+        // efficienze: interpolate and convert to fraction (we clamp at endpoints in linearInterp)
+let ee_CHP_h = linearInterp(P_CHP, ee_CHP, P_post) / 100.0;
+let et_CHP_h = linearInterp(P_CHP, et_CHP, P_post) / 100.0;
+
+        // thermal produced
+        let potenza_t_post = 0;
+        if(ee_CHP_h > 0){
+            potenza_t_post = (P_post / ee_CHP_h) * et_CHP_h;
+        } else {
+            potenza_t_post = 0;
+        }
+
+        let potenza_t_int = 0;
+        if(potenza_t_post < carico_t){
+            potenza_t_int = carico_t - potenza_t_post;
+        } else {
+            potenza_t_int = 0;
+        }
+        thermal_deficit.push(potenza_t_int);
+
+        // p_self: produced and self-used (for tax_ee calc)
+        const p_self = P_post - sell_req;
+
+        // cost calculation
+        let costVal = 0;
+        if(P_CHP_el === 0){
+            // CHP off
+            costVal = (carico_t/(eff_t_ref*lhv) * (Cu_gas + tax_u) + carico_e * (prezzi + tax_ee));
+        } else {
+            // replicate your MATLAB formula
+            // ((potenza_t_int/(eff_t_ref*lhv) + Potenza_e_post/(ee_CHP_h*lhv))*Cu_gas
+            // + (Potenza_e_post/(ee_CHP_h*lhv)-0.22* Potenza_e_post + potenza_t_int/(eff_t_ref*lhv))*tax_u
+            // + p_e_int_post*prezzi - p_e_sur_post * prezzi + c_m * Potenza_e_post + tax_ee*(p_e_int_post+p_self));
+            // Note: p_e_int_post = buy_req, p_e_sur_post = sell_req
+            const fuel_from_chp = ee_CHP_h>0 ? (P_post/(ee_CHP_h*lhv)) : 0;
+            const fuel_from_boiler = (potenza_t_int/(eff_t_ref*lhv));
+            const tax_component = (fuel_from_chp - 0.22 * P_post + fuel_from_boiler) * tax_u;
+            const gas_component = (fuel_from_boiler + fuel_from_chp) * Cu_gas;
+            const market_net = buy_req * prezzi - sell_req * prezzi;
+            const maint = c_m * P_post;
+            const tax_ee_component = tax_ee * (buy_req + p_self);
+            costVal = gas_component + tax_component + market_net + maint + tax_ee_component;
+        }
+
+        Cost.push(costVal);
+    }
+
+    // find minimum cost
+    let minCost = Number.POSITIVE_INFINITY;
+    let minIdx = -1;
+    for(let i=0;i<Cost.length;i++){
+        if(Cost[i] < minCost){
+            minCost = Cost[i];
+            minIdx = i;
+        }
+    }
+
+    // populate UI
+    const best_potenza = Potenza_e_post[minIdx];
+    const best_buy = E_buy_req[minIdx];
+    const best_sell = E_sell_req[minIdx];
+    const produced = best_potenza;
+    const best_cost = Cost[minIdx];
+
+    document.getElementById('best_chp').textContent = best_potenza.toFixed(0) + ' kW';
+    document.getElementById('produced_chp').textContent = produced.toFixed(0) + ' kW';
+    document.getElementById('buy_qty').textContent = best_buy.toFixed(0) + ' kW';
+    document.getElementById('sell_qty').textContent = best_sell.toFixed(0) + ' kW';
+    document.getElementById('best_cost').textContent = '€ ' + best_cost.toFixed(2);
+    document.getElementById('session_date').textContent = tomorrowDateStr();
+
+    // fill results table
+    const tbody = document.querySelector('#resultsTable tbody');
+    tbody.innerHTML = '';
+    for(let i=0;i<Potenza_e_post.length;i++){
+        const tr = document.createElement('tr');
+        const td1 = document.createElement('td'); td1.textContent = Potenza_e_post[i].toFixed(0);
+        const td2 = document.createElement('td'); td2.textContent = E_buy_req[i].toFixed(0);
+        const td3 = document.createElement('td'); td3.textContent = E_sell_req[i].toFixed(0);
+        const td4 = document.createElement('td'); td4.textContent = thermal_deficit[i].toFixed(0);
+        const td5 = document.createElement('td'); td5.textContent = '€ ' + Cost[i].toFixed(2);
+        tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); tr.appendChild(td4); tr.appendChild(td5);
+        tbody.appendChild(tr);
+    }
+
+    // update chart
+    updateChart(Potenza_e_post, Cost, minIdx);
+
+    // store last results for CSV download
+    window._lastResults = {
+        potenza: Potenza_e_post,
+        buy: E_buy_req,
+        sell: E_sell_req,
+        thermDef: thermal_deficit,
+        cost: Cost
+    };
+}
+
+/* =======================
+   CHART.JS setup
+   ======================= */
+let chart = null;
+function updateChart(xArr, yArr, highlightIdx){
+    const ctx = document.getElementById('costChart').getContext('2d');
+
+    const data = {
+        labels: xArr.map(v=>v.toFixed(0)),
+        datasets: [{
+            label: 'Cost (EUR)',
+            data: yArr.map(v=>Number(v.toFixed(2))),
+            fill: false,
+            borderColor: 'rgba(11,99,183,0.9)',
+            tension: 0.25,
+            pointRadius: 4,
+            pointBackgroundColor: xArr.map((v,i)=> i===highlightIdx ? '#2d9c6a' : '#0b63b7'),
+            pointBorderColor: xArr.map((v,i)=> i===highlightIdx ? '#2d9c6a' : '#0b63b7'),
+        }]
+    };
+
+    const cfg = {
+        type: 'line',
+        data: data,
+        options: {
+            responsive:true,
+            maintainAspectRatio:false,
+            scales:{
+                x:{ title:{display:true, text:'CHP Electric Power (kW)'} },
+                y:{ title:{display:true, text:'Cost (EUR)'} }
+            },
+            plugins:{
+                tooltip:{
+                    callbacks:{
+                        label: function(ctx){
+                            return '€ ' + Number(ctx.parsed.y).toFixed(2);
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    if(chart) chart.destroy();
+    chart = new Chart(ctx, cfg);
+}
+
+// initial empty chart
+updateChart([0], [0], 0);
+
+/* =======================
+   Hook run button
+   ======================= */
+document.getElementById('runBtn').addEventListener('click', function(){
+    // ensure numeric inputs
+    if(document.getElementById('input_elec').value === '') document.getElementById('input_elec').value = 8150;
+    if(document.getElementById('input_therm').value === '') document.getElementById('input_therm').value = 5070;
+    runSimulation();
+});
+
+/* run once at load with defaults */
+window.addEventListener('load', ()=>{
+    // set default values already present in inputs
+    priceBadge.textContent = '€ ' + marketPrice.toFixed(3) + '/kWh';
+    // don't run automatically the simulation until user clicks (but you could)
+});
+
+/* =======================
+   CSV download for results
+   ======================= */
+document.getElementById('downloadCsv').addEventListener('click', function(){
+    if(!window._lastResults){
+        alert('Run a session first to get results.');
+        return;
+    }
+    const res = window._lastResults;
+    let csv = 'P_CHPost_kW,Buy_kW,Sell_kW,Thermal_deficit_kW,Cost_EUR\n';
+    for(let i=0;i<res.potenza.length;i++){
+        csv += `${res.potenza[i].toFixed(0)},${res.buy[i].toFixed(0)},${res.sell[i].toFixed(0)},${res.thermDef[i].toFixed(0)},${res.cost[i].toFixed(2)}\n`;
+    }
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'optinamica_results.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+});
+
+</script>
+</body>
+</html>
